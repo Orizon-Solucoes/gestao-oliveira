@@ -24,6 +24,7 @@ try {
     if ($latest -ne $installedCommit) {
         Write-Host "Atualizacao encontrada. Preparando a nova versao..." -ForegroundColor Green
         if (-not (Test-Path $installerPath)) { throw "Instalador nao encontrado." }
+        Set-Location $env:TEMP
         & $installerPath -Silent -LaunchAfterInstall
     } elseif ($installedExe) {
         Start-Process -FilePath $installedExe
