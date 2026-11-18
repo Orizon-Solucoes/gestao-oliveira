@@ -25,7 +25,9 @@ try {
         Write-Host "Atualizacao encontrada. Preparando a nova versao..." -ForegroundColor Green
         if (-not (Test-Path $installerPath)) { throw "Instalador nao encontrado." }
         Set-Location $env:TEMP
-        & $installerPath -Silent -LaunchAfterInstall
+        $tempInstaller = Join-Path $env:TEMP ("GestaoOliveira-Atualizador-" + [Guid]::NewGuid().ToString("N") + ".ps1")
+        Copy-Item -LiteralPath $installerPath -Destination $tempInstaller -Force
+        try { & $tempInstaller -Silent -LaunchAfterInstall } finally { Remove-Item -LiteralPath $tempInstaller -Force -ErrorAction SilentlyContinue }
     } elseif ($installedExe) {
         Start-Process -FilePath $installedExe
     } else {
