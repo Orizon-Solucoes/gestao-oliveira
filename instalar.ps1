@@ -94,8 +94,8 @@ try {
 
     Write-Step "Extraindo o projeto"
     Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
-    $sourceDirectory = Join-Path $extractPath "gestao-oliveira-main"
-    if (-not (Test-Path (Join-Path $sourceDirectory "package.json"))) {
+    $sourceDirectory = Get-ChildItem -LiteralPath $extractPath -Directory | Where-Object { Test-Path (Join-Path $_.FullName "package.json") } | Select-Object -First 1 -ExpandProperty FullName
+    if (-not $sourceDirectory) {
         throw "O pacote baixado nao possui a estrutura esperada do projeto."
     }
 
@@ -157,6 +157,7 @@ catch {
     Write-Host ""
     Write-Host "ERRO: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Nenhum dado local do Gestao Oliveira foi removido."
+    if ($Silent) { throw }
 }
 finally {
     Write-Host ""
