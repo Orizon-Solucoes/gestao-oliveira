@@ -23,7 +23,7 @@ O instalador cria:
 - `Documentos\GestaoOliveira\Aplicativo` — arquivos do aplicativo.
 - `Área de Trabalho\Gestão Oliveira` — atalho para abrir o sistema.
 
-Depois da instalação, basta usar o atalho da Área de Trabalho. Para instalar a versão mais recente publicada na branch `main`, execute novamente o mesmo comando do PowerShell. Feche o aplicativo antes de atualizar.
+Depois da instalação, basta usar o atalho da Área de Trabalho. **A cada abertura, o inicializador consulta o último commit da branch `main` no GitHub.** Se houver uma atualização, ele baixa o código mais recente, recompila o aplicativo e o abre automaticamente. Se não houver internet, tenta abrir a última versão instalada. Não é necessário executar novamente o comando de instalação para receber atualizações.
 
 > O script precisa de internet. A instalação do Node.js pelo WinGet pode solicitar confirmação ou autorização do Windows. O script não altera a política de execução permanentemente.
 
