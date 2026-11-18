@@ -37,3 +37,6 @@ dist-electron
 *.bak
 *.backup
 backups/
+
+# Arquivos gerados pelo Electron Builder
+release/
