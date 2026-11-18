@@ -1,3 +1,5 @@
+param([switch]$Silent, [switch]$LaunchAfterInstall)
+
 $ErrorActionPreference = "Stop"
 
 function Write-Step([string]$Message) {
@@ -19,7 +21,10 @@ function Invoke-Checked([string]$Command, [string[]]$Arguments, [string]$Working
 }
 
 try {
-    $repoUrl = "https://github.com/Orizon-Solucoes/gestao-oliveira/archive/refs/heads/main.zip"
+    $apiUrl = "https://api.github.com/repos/Orizon-Solucoes/gestao-oliveira/commits/main"
+    $latestCommit = (Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "Gestao-Oliveira-Updater" }).sha
+    if (-not $latestCommit) { throw "Nao foi possivel identificar a versao mais recente no GitHub." }
+    $repoUrl = "https://github.com/Orizon-Solucoes/gestao-oliveira/archive/$latestCommit.zip"
     $documents = [Environment]::GetFolderPath("MyDocuments")
     $installRoot = Join-Path $documents "GestaoOliveira"
     $appDirectory = Join-Path $installRoot "Aplicativo"
@@ -120,13 +125,17 @@ try {
     if (Test-Path $backupDirectory) { Remove-Item -LiteralPath $backupDirectory -Recurse -Force }
 
     $finalExecutable = Join-Path $appDirectory "release\$version\win-unpacked\Gestao Oliveira.exe"
+    Set-Content -LiteralPath (Join-Path $appDirectory ".commit-instalado") -Value $latestCommit -Encoding ASCII
     Write-Step "Criando atalho na Area de Trabalho"
+    $launcherPath = Join-Path $appDirectory "iniciar.ps1"
+    if (-not (Test-Path $launcherPath)) { throw "O inicializador iniciar.ps1 nao foi encontrado no pacote." }
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $finalExecutable
-    $shortcut.WorkingDirectory = Split-Path $finalExecutable
+    $shortcut.TargetPath = (Join-Path $PSHOME "powershell.exe")
+    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File " + [char]34 + $launcherPath + [char]34
+    $shortcut.WorkingDirectory = $appDirectory
     $shortcut.IconLocation = "$finalExecutable,0"
-    $shortcut.Description = "Abrir o sistema Gestao Oliveira"
+    $shortcut.Description = "Verificar atualizacoes e abrir o Gestao Oliveira"
     $shortcut.Save()
 
     if (Test-Path $stagingRoot) { Remove-Item -LiteralPath $stagingRoot -Recurse -Force }
@@ -137,8 +146,12 @@ try {
     Write-Host "Atalho: $shortcutPath"
     Write-Host "Os dados locais do aplicativo nao foram apagados." -ForegroundColor Green
     Write-Host ""
-    $answer = Read-Host "Deseja abrir o Gestao Oliveira agora? (S/N)"
-    if ($answer -match "^[Ss]") { Start-Process -FilePath $finalExecutable }
+    if ($LaunchAfterInstall) {
+        Start-Process -FilePath $finalExecutable
+    } elseif (-not $Silent) {
+        $answer = Read-Host "Deseja abrir o Gestao Oliveira agora? (S/N)"
+        if ($answer -match "^[Ss]") { Start-Process -FilePath $finalExecutable }
+    }
 }
 catch {
     Write-Host ""
@@ -147,5 +160,5 @@ catch {
 }
 finally {
     Write-Host ""
-    Read-Host "Pressione ENTER para fechar"
+    if (-not $Silent) { Read-Host "Pressione ENTER para fechar" }
 }
