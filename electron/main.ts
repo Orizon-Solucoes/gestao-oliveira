@@ -27,10 +27,18 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
+    show: false,
+    maximizable: true,
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
+  })
+
+  // Abre maximizado, ocupando a area de trabalho sem esconder a barra de tarefas.
+  win.once('ready-to-show', () => {
+    win?.maximize()
+    win?.show()
   })
 
   // Test active push message to Renderer-process.
