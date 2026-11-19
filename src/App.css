@@ -815,3 +815,18 @@ button:disabled{opacity:.45;cursor:not-allowed}
     width: 100%;
   }
 }
+
+/* Relatórios por período e seleção de item no carrinho */
+.report-filter{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:16px}
+.report-filter .field-label{max-width:260px;flex:1}
+.report-filter select{width:100%;min-height:39px;padding:0 10px;border:1px solid #41423c;border-radius:8px;background:#20211f;color:#eee}
+.report-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.report-product-row{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid #33342f}
+.report-rank{width:24px;height:24px;display:grid;place-items:center;border-radius:7px;background:#363a2e;color:#e5edcf;font-size:11px;font-weight:700;flex:0 0 auto}
+.report-rank.muted-rank{background:#2b2c29;color:#92948c}
+.report-product-name{min-width:0;flex:1}
+.report-product-row strong{font-size:12px;white-space:nowrap}
+.cart-row{cursor:pointer}
+.cart-row.selected{background:#2b3024;outline:1px solid #69764e;border-radius:8px;padding-left:8px;padding-right:8px}
+.quantity-controls button[title="Alterar quantidade (F3)"]{min-width:28px;padding:2px 6px;border:1px solid #555a48;border-radius:5px;background:#363a2e;color:#e5edcf}
+@media(max-width:900px){.report-columns{grid-template-columns:1fr}.report-filter{align-items:stretch;flex-direction:column}.report-filter .field-label{max-width:none}}
