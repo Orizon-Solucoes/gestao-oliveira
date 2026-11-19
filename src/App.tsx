@@ -186,6 +186,7 @@ function App() {
   const productSales = data.products.map(product => ({
     id: product.id,
     name: product.name,
+    unit: product.unit,
     quantity: reportSales.reduce((sum, sale) => sum + sale.items
       .filter(item => item.productId === product.id)
       .reduce((itemSum, item) => itemSum + item.quantity, 0), 0),
@@ -231,6 +232,7 @@ function App() {
       if (page !== 'Frente de caixa') return
 
       if (event.key === 'Escape') {
+        event.preventDefault()
         if (quantityModalProduct) setQuantityModalProduct(null)
         else if (cartQuantityItem) setCartQuantityItem(null)
         else if (checkout) setCheckout(false)
@@ -895,7 +897,7 @@ function App() {
                         <div className="report-product-row" key={product.id}>
                           <span className="report-rank">{index + 1}</span>
                           <span className="report-product-name">{product.name}</span>
-                          <strong>{product.quantity} un.</strong>
+                          <strong>{product.quantity} {product.unit}</strong>
                         </div>
                       )) : <div className="empty compact">Nenhuma venda de produto neste período.</div>}
                     </section>
@@ -906,7 +908,7 @@ function App() {
                         <div className="report-product-row" key={product.id}>
                           <span className="report-rank muted-rank">{index + 1}</span>
                           <span className="report-product-name">{product.name}</span>
-                          <strong>{product.quantity} un.</strong>
+                          <strong>{product.quantity} {product.unit}</strong>
                         </div>
                       )) : <div className="empty compact">Cadastre produtos para visualizar o ranking.</div>}
                     </section>
