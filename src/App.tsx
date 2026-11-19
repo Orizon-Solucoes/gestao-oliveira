@@ -43,6 +43,9 @@ function App() {
   const [notice, setNotice] = useState('')
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
+  const [selectedCartKey, setSelectedCartKey] = useState<string | null>(null)
+  const [cartQuantityItem, setCartQuantityItem] = useState<CartItem | null>(null)
+  const [reportPeriod, setReportPeriod] = useState<'today' | 'week' | 'month' | 'all'>('month')
 
   const searchInputRef = useRef<HTMLInputElement>(null)
   const quantityInputRef = useRef<HTMLInputElement>(null)
@@ -156,6 +159,45 @@ function App() {
   const lowStock = data.products.filter(product => product.active && product.stock <= 5)
   const cashIsOpen = Boolean(data.cashSession && !data.cashSession.closedAt)
 
+  const reportSales = useMemo(() => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    if (reportPeriod === 'week') {
+      const day = (start.getDay() + 6) % 7
+      start.setDate(start.getDate() - day)
+    } else if (reportPeriod === 'month') {
+      start.setDate(1)
+    }
+    return data.sales.filter(sale => {
+      if (sale.status !== 'concluida') return false
+      if (reportPeriod === 'all') return true
+      return new Date(sale.createdAt) >= start
+    })
+  }, [data.sales, reportPeriod])
+
+  const reportTotal = reportSales.reduce((sum, sale) => sum + sale.total, 0)
+  const reportPaymentTotals = paymentMethods.reduce((totals, method) => {
+    totals[method] = reportSales.flatMap(sale => sale.payments)
+      .filter(payment => payment.method === method)
+      .reduce((sum, payment) => sum + payment.amount, 0)
+    return totals
+  }, {} as Record<Payment['method'], number>)
+
+  const productSales = data.products.map(product => ({
+    id: product.id,
+    name: product.name,
+    quantity: reportSales.reduce((sum, sale) => sum + sale.items
+      .filter(item => item.productId === product.id)
+      .reduce((itemSum, item) => itemSum + item.quantity, 0), 0),
+  }))
+  const bestSellingProducts = productSales
+    .filter(product => product.quantity > 0)
+    .sort((a, b) => b.quantity - a.quantity || a.name.localeCompare(b.name))
+    .slice(0, 10)
+  const leastSellingProducts = productSales
+    .sort((a, b) => a.quantity - b.quantity || a.name.localeCompare(b.name))
+    .slice(0, 10)
+
   const run = async (action: () => Promise<unknown>, success: string) => {
     try {
       await action()
@@ -190,20 +232,33 @@ function App() {
 
       if (event.key === 'Escape') {
         if (quantityModalProduct) setQuantityModalProduct(null)
+        else if (cartQuantityItem) setCartQuantityItem(null)
         else if (checkout) setCheckout(false)
         else if (diversosModal) setDiversosModal(false)
         else if (productModal) setProductModal(false)
         else if (receiptSale) setReceiptSale(null)
         else if (printQuestionSale) setPrintQuestionSale(null)
+        else if (cart.length && window.confirm('Cancelar a venda atual e limpar todos os itens do carrinho?')) {
+          setCart([])
+          setSelectedCartKey(null)
+          setError('')
+          setNotice('Venda atual cancelada.')
+        }
         return
       }
 
-      const modalOpen = checkout || diversosModal || productModal || receiptSale || printQuestionSale || quantityModalProduct
+      const modalOpen = checkout || diversosModal || productModal || receiptSale || printQuestionSale || quantityModalProduct || cartQuantityItem
 
       if (event.key === 'F2' && !modalOpen) {
         event.preventDefault()
         searchInputRef.current?.focus()
         searchInputRef.current?.select()
+      }
+
+      if (event.key === 'F3' && !modalOpen && cart.length) {
+        event.preventDefault()
+        const selected = cart.find(item => item.key === selectedCartKey) || cart[cart.length - 1]
+        openCartQuantityEditor(selected)
       }
 
       if (event.key === 'F4' && !modalOpen) {
@@ -214,7 +269,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [page, checkout, diversosModal, productModal, receiptSale, printQuestionSale, quantityModalProduct, finalize])
+  }, [page, checkout, diversosModal, productModal, receiptSale, printQuestionSale, quantityModalProduct, cartQuantityItem, cart, selectedCartKey, finalize])
 
   const openNewProduct = (product?: Product) => {
     setEditing(product || null)
@@ -251,17 +306,23 @@ function App() {
   }
 
   const openQuantityModal = (product: Product) => {
+    setCartQuantityItem(null)
     setQuantityModalProduct(product)
     setQuantityInput('1')
     setError('')
     setNotice('')
   }
 
+  const openCartQuantityEditor = (item: CartItem) => {
+    setQuantityModalProduct(null)
+    setCartQuantityItem(item)
+    setQuantityInput(String(item.quantity))
+    setError('')
+    setNotice('')
+  }
+
   const confirmAddProduct = (event?: FormEvent) => {
     event?.preventDefault()
-
-    if (!quantityModalProduct) return
-
     const quantity = Number(quantityInput)
 
     if (!Number.isInteger(quantity) || quantity < 1) {
@@ -269,6 +330,19 @@ function App() {
       return
     }
 
+    if (cartQuantityItem) {
+      setCart(current => current.map(item => item.key === cartQuantityItem.key
+        ? { ...item, quantity }
+        : item))
+      setSelectedCartKey(cartQuantityItem.key)
+      setCartQuantityItem(null)
+      setQuantityInput('1')
+      setError('')
+      setNotice('Quantidade de ' + cartQuantityItem.name + ' atualizada para ' + quantity + '.')
+      return
+    }
+
+    if (!quantityModalProduct) return
     const product = quantityModalProduct
 
     setCart(current => {
@@ -290,9 +364,11 @@ function App() {
     })
 
     setQuantityModalProduct(null)
+    setCartQuantityItem(null)
+    setSelectedCartKey(product.id)
     setQuantityInput('1')
     setError('')
-    setNotice(`${quantity}x ${product.name} adicionado à venda.`)
+    setNotice(quantity + 'x ' + product.name + ' adicionado à venda.')
     setSearch('')
     searchInputRef.current?.focus()
   }
@@ -408,6 +484,7 @@ function App() {
       })
 
       setCart([])
+      setSelectedCartKey(null)
       setCheckout(false)
       setCheckoutPayments([])
       // Não altera a página: permanece na Frente de caixa após a venda.
@@ -628,7 +705,7 @@ function App() {
                       </button>
 
                       <p className="pos-shortcuts">
-                        Atalhos: <strong>F2</strong> pesquisar · <strong>Enter</strong> selecionar produto · <strong>F4</strong> receber · <strong>Esc</strong> fechar janela
+                        Atalhos: <strong>F2</strong> pesquisar · <strong>Enter</strong> selecionar · <strong>F3</strong> alterar quantidade · <strong>F4</strong> receber · <strong>Esc</strong> cancelar
                       </p>
                     </section>
 
@@ -637,26 +714,50 @@ function App() {
 
                       <div className="cart-items">
                         {cart.map(item => (
-                          <div className="cart-row" key={item.key}>
+                          <div
+                            className={selectedCartKey === item.key ? 'cart-row selected' : 'cart-row'}
+                            key={item.key}
+                            onClick={() => setSelectedCartKey(item.key)}
+                          >
                             <div>
                               <strong>{item.name}</strong>
                               <small>{money(item.unitPrice)} cada</small>
                             </div>
 
                             <div className="quantity-controls">
-                              <button onClick={() => setCart(current => current.map(i =>
-                                i.key === item.key ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i,
-                              ))}>−</button>
+                              <button onClick={event => {
+                                event.stopPropagation()
+                                setCart(current => current.map(i =>
+                                  i.key === item.key ? { ...i, quantity: Math.max(1, i.quantity - 1) } : i,
+                                ))
+                                setSelectedCartKey(item.key)
+                              }}>−</button>
 
-                              <span>{item.quantity}</span>
+                              <button
+                                type="button"
+                                title="Alterar quantidade (F3)"
+                                aria-label={'Alterar quantidade de ' + item.name}
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  openCartQuantityEditor(item)
+                                }}
+                              >{item.quantity}</button>
 
-                              <button onClick={() => setCart(current => current.map(i =>
-                                i.key === item.key ? { ...i, quantity: i.quantity + 1 } : i,
-                              ))}>＋</button>
+                              <button onClick={event => {
+                                event.stopPropagation()
+                                setCart(current => current.map(i =>
+                                  i.key === item.key ? { ...i, quantity: i.quantity + 1 } : i,
+                                ))
+                                setSelectedCartKey(item.key)
+                              }}>＋</button>
 
                               <button
                                 className="remove"
-                                onClick={() => setCart(current => current.filter(i => i.key !== item.key))}
+                                onClick={event => {
+                                  event.stopPropagation()
+                                  setCart(current => current.filter(i => i.key !== item.key))
+                                  if (selectedCartKey === item.key) setSelectedCartKey(null)
+                                }}
                               >×</button>
                             </div>
 
