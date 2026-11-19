@@ -553,9 +553,17 @@ export const store = {
         }
       }
 
+      const currentSession = data.cashSession
+      const sessionSalesCount = data.sales.filter(sale =>
+        sale.cashSessionId
+          ? sale.cashSessionId === currentSession.id
+          : sale.createdAt >= currentSession.openedAt &&
+            (!currentSession.closedAt || sale.createdAt <= currentSession.closedAt),
+      ).length
+
       const sale: Sale = {
         id: crypto.randomUUID(),
-        number: data.nextSaleNumber++,
+        number: sessionSalesCount + 1,
         createdAt: new Date().toISOString(),
         items,
         payments,
