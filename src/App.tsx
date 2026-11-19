@@ -760,55 +760,68 @@ function App() {
 
               {page === 'Relatórios' && (
                 <>
-                  <Heading title="Relatórios" subtitle="Resumo calculado a partir das vendas salvas." />
+                  <Heading title="Relatórios" subtitle="Acompanhe vendas, produtos e recebimentos por período." />
+
+                  <div className="report-filter panel">
+                    <label className="field-label">
+                      Período do relatório
+                      <select value={reportPeriod} onChange={event => setReportPeriod(event.target.value as typeof reportPeriod)}>
+                        <option value="today">Hoje</option>
+                        <option value="week">Esta semana</option>
+                        <option value="month">Este mês</option>
+                        <option value="all">Todo o período</option>
+                      </select>
+                    </label>
+                    <span className="muted">{reportSales.length} venda(s) concluída(s) no período</span>
+                  </div>
 
                   <div className="stats-grid">
-                    <Stat
-                      label="Faturamento total"
-                      value={money(data.sales.filter(s => s.status === 'concluida').reduce((n, s) => n + s.total, 0))}
-                      note="Vendas não canceladas"
-                    />
-                    <Stat
-                      label="Vendas concluídas"
-                      value={String(data.sales.filter(s => s.status === 'concluida').length)}
-                      note="Desde o início do uso"
-                    />
-                    <Stat
-                      label="Ticket médio"
-                      value={money(
-                        data.sales.filter(s => s.status === 'concluida').length
-                          ? data.sales.filter(s => s.status === 'concluida').reduce((n, s) => n + s.total, 0)
-                            / data.sales.filter(s => s.status === 'concluida').length
-                          : 0,
-                      )}
-                      note="Por venda concluída"
-                    />
+                    <Stat label="Faturamento" value={money(reportTotal)} note="Vendas não canceladas" />
+                    <Stat label="Vendas concluídas" value={String(reportSales.length)} note="No período selecionado" />
+                    <Stat label="Ticket médio" value={money(reportSales.length ? reportTotal / reportSales.length : 0)} note="Valor médio por venda" />
                     <Stat
                       label="Lucro estimado"
-                      value={money(data.sales.filter(s => s.status === 'concluida').reduce((n, s) =>
-                        n + s.items.reduce((m, i) =>
-                          m + (i.costPrice === null ? 0 : (i.unitPrice - i.costPrice) * i.quantity), 0),
-                      0))}
+                      value={money(reportSales.reduce((sum, sale) => sum + sale.items.reduce((itemSum, item) =>
+                        itemSum + (item.costPrice === null ? 0 : (item.unitPrice - item.costPrice) * item.quantity), 0), 0))}
                       note="Somente itens com custo informado"
                     />
                   </div>
 
+                  <div className="report-columns">
+                    <section className="panel">
+                      <PanelTitle title="Produtos mais vendidos" />
+                      {bestSellingProducts.length ? bestSellingProducts.map((product, index) => (
+                        <div className="report-product-row" key={product.id}>
+                          <span className="report-rank">{index + 1}</span>
+                          <span className="report-product-name">{product.name}</span>
+                          <strong>{product.quantity} un.</strong>
+                        </div>
+                      )) : <div className="empty compact">Nenhuma venda de produto neste período.</div>}
+                    </section>
+
+                    <section className="panel">
+                      <PanelTitle title="Produtos menos vendidos" />
+                      {leastSellingProducts.length ? leastSellingProducts.map((product, index) => (
+                        <div className="report-product-row" key={product.id}>
+                          <span className="report-rank muted-rank">{index + 1}</span>
+                          <span className="report-product-name">{product.name}</span>
+                          <strong>{product.quantity} un.</strong>
+                        </div>
+                      )) : <div className="empty compact">Cadastre produtos para visualizar o ranking.</div>}
+                    </section>
+                  </div>
+
                   <section className="panel">
-                    <PanelTitle title="Formas de pagamento" />
+                    <PanelTitle title="Faturamento por forma de pagamento" />
                     {paymentMethods.map(method => (
                       <div className="simple-row" key={method}>
                         <span>{method}</span>
-                        <strong>
-                          {money(data.sales.filter(s => s.status === 'concluida')
-                            .flatMap(s => s.payments)
-                            .filter(payment => payment.method === method)
-                            .reduce((n, payment) => n + payment.amount, 0))}
-                        </strong>
+                        <strong>{money(reportPaymentTotals[method])}</strong>
                       </div>
                     ))}
                     <p className="muted">
-                      O lucro estimado será calculado com base no custo cadastrado de cada produto.
-                      Itens Diversos sem custo conhecido não entram no cálculo de lucro.
+                      Os relatórios consideram somente vendas concluídas. Vendas canceladas não entram nos totais nem nos rankings.
+                      Itens Diversos não entram no ranking de produtos cadastrados.
                     </p>
                   </section>
                 </>
@@ -1246,26 +1259,29 @@ function App() {
         </div>
       )}
 
-      {quantityModalProduct && (
+      {(quantityModalProduct || cartQuantityItem) && (
         <div className="modal-backdrop" role="presentation">
           <form className="modal" onSubmit={confirmAddProduct}>
             <div className="modal-heading">
-              <h2>Adicionar produto</h2>
+              <h2>{cartQuantityItem ? 'Alterar quantidade' : 'Adicionar produto'}</h2>
               <button
                 type="button"
                 className="icon-button"
-                onClick={() => setQuantityModalProduct(null)}
+                onClick={() => {
+                  setQuantityModalProduct(null)
+                  setCartQuantityItem(null)
+                }}
               >
                 ×
               </button>
             </div>
 
             <p>
-              Produto: <strong>{quantityModalProduct.name}</strong>
+              Produto: <strong>{cartQuantityItem?.name || quantityModalProduct?.name}</strong>
             </p>
 
             <p className="muted">
-              Preço unitário: {money(quantityModalProduct.salePrice)}
+              Preço unitário: {money(cartQuantityItem?.unitPrice ?? quantityModalProduct?.salePrice ?? 0)}
             </p>
 
             <label className="field-label">
@@ -1288,13 +1304,16 @@ function App() {
               <button
                 type="button"
                 className="button-secondary"
-                onClick={() => setQuantityModalProduct(null)}
+                onClick={() => {
+                  setQuantityModalProduct(null)
+                  setCartQuantityItem(null)
+                }}
               >
                 Cancelar
               </button>
 
               <button className="button-primary" type="submit">
-                Adicionar à venda
+                {cartQuantityItem ? 'Salvar quantidade' : 'Adicionar à venda'}
               </button>
             </div>
           </form>
