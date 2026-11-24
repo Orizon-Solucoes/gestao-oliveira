@@ -513,7 +513,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">O</div>
+          <img className="brand-mark" src="/gestao-oliveira.svg" alt="Gestão Oliveira" />
           <div>
             <strong>Gestão Oliveira</strong>
             <span>GESTÃO COMERCIAL</span>
