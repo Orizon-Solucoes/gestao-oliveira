@@ -30,8 +30,17 @@ jobs:
       - name: Instalar dependências
         run: pnpm install --frozen-lockfile
 
-      - name: Compilar aplicativo Windows
-        run: pnpm build
+      - name: Preparar ícone
+        run: pnpm exec node scripts/prepare-icon.mjs
+
+      - name: Verificar TypeScript
+        run: pnpm exec tsc -p tsconfig.json
+
+      - name: Compilar interface
+        run: pnpm exec vite build
+
+      - name: Empacotar aplicativo Windows
+        run: pnpm exec electron-builder --win dir
 
       - name: Publicar artefato para conferência
         uses: actions/upload-artifact@v4
