@@ -7,7 +7,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .app-shell{min-height:100vh;display:flex;background:#171817;color:#eee;font-size:13px}
 .sidebar{width:230px;flex:0 0 230px;background:#20211f;border-right:1px solid #33342f;display:flex;flex-direction:column;padding:24px 13px 16px}
 .brand{display:flex;align-items:center;gap:10px;padding:0 7px 32px}
-.brand-mark{width:38px;height:38px;border-radius:10px;background:#d5e0b0;color:#25281f;display:grid;place-items:center;font-size:22px;font-weight:800}
+.brand-mark{width:42px;height:42px;flex:0 0 42px;object-fit:contain;border-radius:11px;display:block}
 .brand strong,.brand span{display:block}
 .brand strong{font-size:14px}
 .brand span{margin-top:4px;font-size:9px;letter-spacing:1.2px;color:#92948c}
