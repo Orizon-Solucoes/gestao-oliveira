@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode, type KeyboardEvent } from 'react'
 import type { Product, Sale, StoreData, Payment, CashSession } from '../electron/store'
 import './App.css'
+import logoGestao from './assets/gestao-oliveira.svg'
 
 type Page = 'Início' | 'Frente de caixa' | 'Produtos' | 'Vendas' | 'Relatórios' | 'Caixa'
 type CartItem = { key: string; productId: string | null; name: string; quantity: number; unitPrice: number }
@@ -513,7 +514,7 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <img className="brand-mark" src="/gestao-oliveira.svg" alt="Gestão Oliveira" />
+          <img className="brand-mark" src={logoGestao} alt="Gestão Oliveira" />
           <div>
             <strong>Gestão Oliveira</strong>
             <span>GESTÃO COMERCIAL</span>
